@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pi Cluster Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head>
+<body>
+  <h1>Pi Cluster Dashboard</h1>
+  <p style="text-align:center;">
+    Server: {{ server_name }} | Time: {{ time }}
+  </p>
+
+  <div class="toolbar">
+    <label><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"> Select All</label>
+    <button id="deleteSelectedBtn" onclick="deleteSelected()">🗑️ Delete Selected</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Select</th>
+        <th>Priority</th>
+        <th>Job ID</th>
+        <th>Filename</th>
+        <th>Status</th>
+        <th>Claimed By</th>
+        <th>Queued</th>
+        <th>Claimed</th>
+        <th>Completed</th>
+        <th>Elapsed (s)</th>
+        <th>Collected</th>
+        <th>Delete</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for job in jobs %}
+      <tr class="status-{{ job.status }}">
+        <td><input type="checkbox" class="job-select" value="{{ job.id }}"></td>
+        <td class="prio{{ job.priority }}">
+          {% if job.priority == '0' %}High{% elif job.priority == '1' %}Medium{% else %}Low{% endif %}
+        </td>
+        <td>{{ job.id }}</td>
+        <td>{{ job.filename }}</td>
+        <td>{{ job.status }}</td>
+        <td>{{ job.claimed_by }}</td>
+        <td>{{ job.timestamp_queued }}</td>
+        <td>{{ job.timestamp_claimed }}</td>
+        <td>{{ job.timestamp_completed }}</td>
+        <td>{{ job.elapsed_seconds }}</td>
+        <td>
+          {% if job.status == "completed" %}
+            <button class="download-btn" onclick="downloadResult('{{ job.id }}')" title="Download result">
+              {% if job.collected == "True" %}✅{% else %}⬇️{% endif %}
+            </button>
+          {% else %}
+            ❌
+          {% endif %}
+        </td>
+        <td>
+          <button class="delete-btn" onclick="deleteJob('{{ job.id }}')" title="Delete job">✖</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+</body>
+</html>
