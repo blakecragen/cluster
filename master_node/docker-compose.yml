@@ -15,11 +15,6 @@ services:
       --dir /data
     volumes:
       - ./data/redis:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   minio:
     image: quay.io/minio/minio
@@ -34,11 +29,6 @@ services:
     restart: unless-stopped
     volumes:
       - ./data/minio:/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   flask:
     build: ./app
@@ -48,11 +38,13 @@ services:
       - "5100:5000"
     depends_on:
       redis:
-        condition: service_healthy
-      minio:
         condition: service_started
     environment:
       REDIS_HOST: redis
       MINIO_HOST: minio
       MINIO_ACCESS_KEY: admin
       MINIO_SECRET_KEY: admin123
+
+      TS_IP: "${TS_IP}"
+    volumes:
+      - /tmp/k3s_join_info.json:/tmp/k3s_join_info.json:ro

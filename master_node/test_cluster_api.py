@@ -103,19 +103,19 @@ if __name__ == "__main__":
         time.sleep(0.5)
 
     # Step 3: View the queue
-    check_queue()
+    # check_queue()
 
     # Step 4: Simulate a worker claiming & uploading a result
-    claimed_id = claim_job()
-    time.sleep(2)
-    if claimed_id:
-        upload_result(claimed_id, "result.txt")
-        # mark_collected(claimed_id)
-    else:
-        print("[WARN] No job was claimed; skipping result upload.")
+    # claimed_id = claim_job()
+    # time.sleep(2)
+    # if claimed_id:
+    #     upload_result(claimed_id, "result.txt")
+    #     # mark_collected(claimed_id)
+    # else:
+    #     print("[WARN] No job was claimed; skipping result upload.")
 
     # Step 5: View claimed/completed jobs
-    claimed_jobs()
+    # claimed_jobs()
 
     # Step 6: Optional cleanup (disabled for debugging)
     # cleanup_completed()

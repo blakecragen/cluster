@@ -1,3 +1,6 @@
+/* ======================= */
+/*      GLOBAL STYLES      */
+/* ======================= */
 body {
   font-family: Arial, sans-serif;
   background: #f4f6f8;
@@ -7,7 +10,12 @@ body {
 
 h1 {
   text-align: center;
+  margin-bottom: 10px;
 }
+
+/* ======================= */
+/*       TABLE STYLE       */
+/* ======================= */
 
 table {
   border-collapse: collapse;
@@ -16,52 +24,172 @@ table {
   background: white;
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  box-shadow: 0 0 10px rgba(0,0,0,0.07);
 }
 
 th, td {
-  padding: 10px 12px;
+  padding: 12px;
   text-align: center;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid #ececec;
 }
 
 th {
   background-color: #0078d4;
   color: white;
+  font-weight: bold;
 }
 
-tr:hover { background-color: #f1f1f1; }
+tr:hover { background-color: #f7faff; }
+
+/* ======================= */
+/*        BUTTONS          */
+/* ======================= */
 
 button {
   font-size: 14px;
   cursor: pointer;
   border: none;
   border-radius: 4px;
-  padding: 5px 8px;
+  padding: 6px 10px;
+  transition: 0.2s ease;
 }
 
 .delete-btn {
   background: #d32f2f;
   color: white;
 }
+.delete-btn:hover {
+  background: #b71c1c;
+}
 
 .download-btn {
   background: #1976d2;
   color: white;
 }
-
-.toolbar {
-  margin-bottom: 10px;
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 20px;
+.download-btn:hover {
+  background: #0f4daa;
 }
+
+/* ======================= */
+/*        WORKER STATUS    */
+/* ======================= */
+
+.status-pill {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 50px;
+  font-weight: bold;
+  color: white;
+  font-size: 0.85em;
+}
+
+.status-online {
+  background: #2e7d32;
+}
+
+.status-offline {
+  background: #c62828;
+}
+
+/* ======================= */
+/*        PRIORITIES       */
+/* ======================= */
 
 .prio0 { color: #c62828; font-weight: bold; }
 .prio1 { color: #f9a825; font-weight: bold; }
 .prio2 { color: #2e7d32; font-weight: bold; }
 
+/* ======================= */
+/*     JOB STATUS COLOR    */
+/* ======================= */
+
+.status-queued    { background: #e3f2fd; }
 .status-claimed   { background: #fff3e0; }
 .status-completed { background: #e8f5e9; }
-.status-queued    { background: #e3f2fd; }
+
+/* ======================= */
+/*        TOOLBAR          */
+/* ======================= */
+
+.toolbar {
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-size: 16px;
+}
+
+/* ======================= */
+/*       JOIN PANEL        */
+/* ======================= */
+
+.k3s-panel {
+  width: 90%;
+  margin: 20px auto;
+  background: #f0f4ff;
+  padding: 15px;
+  border-radius: 10px;
+  border: 1px solid #a8c2ff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.k3s-panel h2 {
+  text-align: center;
+  margin-top: 0;
+}
+
+.panel-row {
+  display: flex;
+  align-items: center;
+  margin: 10px 0;
+}
+
+.panel-row label {
+  width: 150px;
+  font-weight: bold;
+}
+
+.panel-row code {
+  background: #e8e8e8;
+  padding: 6px 10px;
+  border-radius: 8px;
+  flex-grow: 1;
+  font-size: 0.9em;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.panel-row button {
+  margin-left: 10px;
+  padding: 6px 10px;
+  cursor: pointer;
+  border-radius: 6px;
+  border: none;
+  background: #4a76ff;
+  color: white;
+  font-weight: bold;
+  transition: 0.2s ease;
+}
+
+.panel-row button:hover {
+  background: #3c5ed9;
+}
+
+/* ======================= */
+/*       WORKERS PANEL     */
+/* ======================= */
+
+.worker-panel {
+  width: 95%;
+  margin: 25px auto;
+  background: #ffffff;
+  padding: 18px;
+  border-radius: 10px;
+  border: 1px solid #d0d0d0;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.worker-panel h2 {
+  margin-top: 0;
+  text-align: center;
+}

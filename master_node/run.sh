@@ -6,96 +6,153 @@ set -e
 
 echo "🚀 Starting Pi Cluster Master Node Setup..."
 
-# Detect OS
 OS=$(uname -s)
-IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "localhost")
 
-# -----------------------------------------------------
-# 1. Install Docker (if missing)
-# -----------------------------------------------------
-if ! command -v docker &> /dev/null; then
+##############################################
+# PART 0 — GET HOST TAILSCALE IP
+##############################################
+
+get_tailscale_ip() {
+    if command -v tailscale >/dev/null 2>&1; then
+        # strip warnings, return last line only
+        ts=$(tailscale ip -4 2>/dev/null | tail -n1)
+        echo "$ts"
+    fi
+}
+
+TS_IP=$(get_tailscale_ip)
+echo "🌐 Tailscale IP detected: ${TS_IP:-none}"
+
+##############################################
+# PART A — DOCKER STACK (Flask/Redis/MinIO)
+##############################################
+
+echo "=== 🐳 Setting up Docker Stack ==="
+
+# Ensure docker compose exists
+if command -v docker compose &>/dev/null; then
+    COMPOSE="docker compose"
+elif command -v docker-compose &>/dev/null; then
+    COMPOSE="docker-compose"
+else
+    echo "⚠️ Docker Compose missing — install Docker Desktop or docker-compose."
+    exit 1
+fi
+
+# Ensure Docker exists
+if ! command -v docker &>/dev/null; then
     echo "🐳 Installing Docker..."
     if [[ "$OS" == "Linux" ]]; then
         curl -fsSL https://get.docker.com | sh
         sudo usermod -aG docker "$USER"
-    elif [[ "$OS" == "Darwin" ]]; then
-        echo "Please install Docker Desktop manually on macOS (https://www.docker.com/products/docker-desktop)"
-    fi
-else
-    echo "✅ Docker already installed."
-fi
-
-# -----------------------------------------------------
-# 2. Install Redis (for local use / backup)
-# -----------------------------------------------------
-if [[ "$OS" == "Linux" ]]; then
-    if ! systemctl is-active --quiet redis-server 2>/dev/null; then
-        echo "Installing Redis..."
-        sudo apt update -y && sudo apt install -y redis-server
-        sudo systemctl enable redis-server
-        sudo systemctl start redis-server
     else
-        echo "✅ Redis already running."
+        echo "Install Docker Desktop on macOS."
+        exit 1
     fi
 else
-    echo "Skipping Redis install on macOS (handled by Docker)."
+    echo "✔ Docker installed"
 fi
 
-# -----------------------------------------------------
-# 3. Install Python deps if needed
-# -----------------------------------------------------
-if ! command -v python3 &> /dev/null; then
-    echo "Installing Python3..."
-    if [[ "$OS" == "Linux" ]]; then
-        sudo apt install -y python3 python3-pip
+# Cleanup conflicting containers
+echo "🧹 Cleaning old containers..."
+for c in cluster_minio cluster_redis cluster_flask minio redis; do
+    if docker ps -a --format '{{.Names}}' | grep -q "^${c}$"; then
+        docker stop "$c" >/dev/null 2>&1 || true
+        docker rm -f "$c" >/dev/null 2>&1 || true
+    fi
+done
+
+# Remove dangling resources
+docker network prune -f >/dev/null 2>&1 || true
+docker volume prune -f >/dev/null 2>&1 || true
+
+# Start Docker Compose WITH TS_IP ENV
+echo "🏗️  Starting Docker Compose stack..."
+TS_IP="$TS_IP" $COMPOSE down --remove-orphans || true
+TS_IP="$TS_IP" $COMPOSE up -d --build
+
+##############################################
+# PART B — K3s MASTER SETUP (macOS + Linux)
+##############################################
+
+echo ""
+echo "=== ☸️  Setting up K3s Kubernetes Master ==="
+
+if [[ "$OS" == "Darwin" ]]; then
+    # macOS → Use Multipass VM
+    if ! command -v multipass >/dev/null; then
+        echo "❌ Multipass required: brew install --cask multipass"
+        exit 1
+    fi
+
+    if ! multipass info master >/dev/null 2>&1; then
+        echo "📦 Creating Multipass VM..."
+        multipass launch --name master --mem 4G --disk 20G
     else
-        brew install python
+        echo "✔ Multipass VM exists"
     fi
-fi
 
-echo "📦 Installing Python dependencies..."
-if [ -f requirements.txt ]; then
-    pip3 install -r requirements.txt --break-system-packages || pip3 install -r requirements.txt
+    MASTER_IP=$(multipass info master | grep IPv4 | awk '{print $2}')
+    echo "🌐 Master VM IP: $MASTER_IP"
+
+    multipass exec master -- bash -c "
+        if ! command -v k3s >/dev/null; then
+            echo 'Installing K3s...'
+            curl -sfL https://get.k3s.io | sh -
+        else
+            echo '✔ K3s installed'
+        fi
+    "
+
+    KUBECTL="multipass exec master -- sudo kubectl"
+
 else
-    echo "⚠️ No requirements.txt found, skipping Python install."
+    # Linux/Pi
+    MASTER_IP=$(hostname -I | awk '{print $1}')
+    if ! command -v k3s >/dev/null; then
+        echo "Installing K3s..."
+        curl -sfL https://get.k3s.io | sh -
+    else
+        echo "✔ K3s installed"
+    fi
+
+    KUBECTL="sudo kubectl"
 fi
 
-# -----------------------------------------------------
-# 4. Setup MinIO (if not running)
-# -----------------------------------------------------
-if ! docker ps --format '{{.Names}}' | grep -q cluster_minio; then
-    echo "🗄️  Starting MinIO..."
-    docker run -d --name cluster_minio \
-        -p 9000:9000 -p 9001:9001 \
-        -e "MINIO_ROOT_USER=admin" \
-        -e "MINIO_ROOT_PASSWORD=admin123" \
-        -v "$(pwd)/data/minio:/data" \
-        quay.io/minio/minio server /data --console-address ":9001"
+##############################################
+# Extract join token & save for dashboard
+##############################################
+
+echo ""
+echo "🔑 Getting K3s join token..."
+
+if [[ "$OS" == "Darwin" ]]; then
+    TOKEN=$(multipass exec master -- sudo cat /var/lib/rancher/k3s/server/node-token)
 else
-    echo "✅ MinIO already running."
+    TOKEN=$(sudo cat /var/lib/rancher/k3s/server/node-token)
 fi
 
-# -----------------------------------------------------
-# 5. Stop old containers and start Docker Compose
-# -----------------------------------------------------
-echo "🧹 Cleaning up old containers..."
-docker compose down --remove-orphans || true
+echo "✔ Token retrieved"
 
-echo "🏗️  Building and starting master node..."
-docker compose up -d --build
+# Store for Flask dashboard
+echo "{\"master_ip\": \"$MASTER_IP\", \"token\": \"$TOKEN\", \"tailscale_ip\": \"$TS_IP\"}" \
+    > /tmp/k3s_join_info.json
 
-echo "📦 Containers currently running:"
-docker ps --filter "name=cluster_"
+##############################################
+# Final Output
+##############################################
 
-# -----------------------------------------------------
-# 6. Print connection info
-# -----------------------------------------------------
 echo ""
-echo "✅ Master Node is ready!"
-echo "🌐 Dashboard: http://$IP:5100"
-echo "🗄️  MinIO Console: http://$IP:9001"
-echo "💾 Redis: $IP:6379"
+echo "🎉 Master Node Ready!"
+
+PUBLIC_IP="${TS_IP:-$MASTER_IP}"
+
+echo "Dashboard:    http://$PUBLIC_IP:5100"
+echo "MinIO:        http://$PUBLIC_IP:9001"
+echo "Redis:        $PUBLIC_IP:6379"
+echo "K3s API:      https://$MASTER_IP:6443"
 echo ""
-echo "Use: docker logs -f cluster_flask  to view live Flask logs"
+echo "Worker join command:"
+echo "curl -sfL https://get.k3s.io | K3S_URL=\"https://$PUBLIC_IP:6443\" K3S_TOKEN=\"$TOKEN\" sh -"
 echo ""
-echo "If on Tailscale, access using your Tailscale IP:  http://$(tailscale ip -4 2>/dev/null || echo $IP):5100"
+echo "Data saved for dashboard: /tmp/k3s_join_info.json"

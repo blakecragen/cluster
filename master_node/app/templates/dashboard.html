@@ -6,18 +6,78 @@
   <title>Pi Cluster Dashboard</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
 </head>
+
 <body>
   <h1>Pi Cluster Dashboard</h1>
-  <p style="text-align:center;">
+
+  <p style="text-align:center; margin-bottom: 10px;">
     Server: {{ server_name }} | Time: {{ time }}
   </p>
 
+  <!-- ============================== -->
+  <!--   MASTER INFO / JOIN COMMAND   -->
+  <!-- ============================== -->
+  <div class="k3s-panel">
+
+    <h2>Worker Join Information</h2>
+
+    <!-- Master IP -->
+    <div class="panel-row">
+      <label><strong>Master IP:</strong></label>
+      <code id="masterIp">{{ master_ip }}</code>
+      <button onclick="copyText('masterIp')">📋 Copy</button>
+    </div>
+
+    <!-- Master Token -->
+    <div class="panel-row">
+      <label><strong>K3s Token:</strong></label>
+      <code id="masterToken">{{ join_token }}</code>
+      <button onclick="copyText('masterToken')">📋 Copy</button>
+    </div>
+
+    <!-- Worker Setup Command -->
+    <div class="panel-row">
+      <label><strong>Worker Setup:</strong></label>
+      <code id="workerJoinCmd">./run.sh {{ master_ip }} {{ join_token }}</code>
+      <button onclick="copyText('workerJoinCmd')">📋 Copy</button>
+    </div>
+
+  </div>
+
+  <!-- ============================== -->
+  <!-- CROSS-OS PYTHON WORKER TABLE  -->
+  <!-- ============================== -->
+  <div class="worker-panel">
+    <h2>Worker Nodes (Cross-OS Python Workers)</h2>
+
+    <table id="workersTable">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Status</th>
+          <th>OS</th>
+          <th>CPU</th>
+          <th>Kernel</th>
+          <th>IP</th>
+          <th>Last Heartbeat</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="7" style="text-align:center;">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+
+  <!-- ============================== -->
+  <!--           JOB TABLE           -->
+  <!-- ============================== -->
   <div class="toolbar">
     <label><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"> Select All</label>
     <button id="deleteSelectedBtn" onclick="deleteSelected()">🗑️ Delete Selected</button>
   </div>
 
-  <table>
+  <table class="jobs">
     <thead>
       <tr>
         <th>Select</th>
@@ -34,13 +94,16 @@
         <th>Delete</th>
       </tr>
     </thead>
+
     <tbody>
       {% for job in jobs %}
       <tr class="status-{{ job.status }}">
         <td><input type="checkbox" class="job-select" value="{{ job.id }}"></td>
+
         <td class="prio{{ job.priority }}">
           {% if job.priority == '0' %}High{% elif job.priority == '1' %}Medium{% else %}Low{% endif %}
         </td>
+
         <td>{{ job.id }}</td>
         <td>{{ job.filename }}</td>
         <td>{{ job.status }}</td>
@@ -49,17 +112,19 @@
         <td>{{ job.timestamp_claimed }}</td>
         <td>{{ job.timestamp_completed }}</td>
         <td>{{ job.elapsed_seconds }}</td>
+
         <td>
           {% if job.status == "completed" %}
-            <button class="download-btn" onclick="downloadResult('{{ job.id }}')" title="Download result">
+            <button class="download-btn" onclick="downloadResult('{{ job.id }}')">
               {% if job.collected == "True" %}✅{% else %}⬇️{% endif %}
             </button>
           {% else %}
             ❌
           {% endif %}
         </td>
+
         <td>
-          <button class="delete-btn" onclick="deleteJob('{{ job.id }}')" title="Delete job">✖</button>
+          <button class="delete-btn" onclick="deleteJob('{{ job.id }}')">✖</button>
         </td>
       </tr>
       {% endfor %}
@@ -67,5 +132,6 @@
   </table>
 
   <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+
 </body>
 </html>

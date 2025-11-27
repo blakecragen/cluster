@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pi-worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: pi-worker
+  template:
+    metadata:
+      labels:
+        app: pi-worker
+    spec:
+      containers:
+      - name: worker
+        image: pi-cluster-worker:latest
+        env:
+        - name: FLASK_HOST
+          value: "cluster_flask"
+        - name: MINIO_HOST
+          value: "cluster_minio"
+        - name: MINIO_ACCESS_KEY
+          value: "admin"
+        - name: MINIO_SECRET_KEY
+          value: "admin123"
