@@ -1,3 +1,3 @@
 .DS_Store
-/data
-/current_task_files
+master_node/data
+worker_node/current_task_files
